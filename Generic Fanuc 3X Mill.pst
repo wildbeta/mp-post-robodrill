@@ -258,6 +258,8 @@ component_type : 0   #Component type: (See documentation for complete list - )
                        #23 = ATC_COMPONENT
 ra_error     : 0     #Flag for aggregate operation
 
+dwell_msec   : 0 #Dwell time for millisecond
+
 # --------------------------------------------------------------------------
 #String and string selector definitions for NC output
 # --------------------------------------------------------------------------
@@ -582,6 +584,8 @@ fmt     19  hour        #Hour
 fmt     20  min         #Minutes
 year2 = year$ + 2000
 
+fmt "P" 4 dwell_msec #Dwell time in millisecond for drill cycle
+
 # --------------------------------------------------------------------------
 # Tool Comment / Manual Entry Section
 # --------------------------------------------------------------------------
@@ -694,7 +698,7 @@ psof$            #Start of file for non-zero tool number
       ptoolcomment
       comment$
       pcan
-      pbld, n$, *t$, sm06, e$
+      pbld, n$, *t$, sm06, sg49, e$ #Add G49 in tool change routine
       if mi1$ > one, absinc$ = zero
       pcan1, pbld, n$, *sgcode, *sgabsinc, pwcs, pfxout, pfyout,
         [if nextdc$ <> 7, *speed, *spindle], pgear, strcantext, e$
@@ -747,7 +751,7 @@ ptlchg$          #Tool change
       comment$
       pcan
       result = newfs(15, feed)  #Reset the output format for 'feed'
-      pbld, n$, *t$, sm06, e$
+      pbld, n$, *t$, sm06, sg49, e$ #Add G49 in tool change routine
       sav_absinc = absinc$
       if mi1$ > one, absinc$ = zero
       pcan1, pbld, n$, *sgcode, *sgabsinc, pwcs, pfxout, pfyout,
@@ -1068,6 +1072,8 @@ parc            #Select the arc output
 # --------------------------------------------------------------------------
 # Drilling
 # --------------------------------------------------------------------------
+dwell_msec = dwell$ * 1000
+
 pdrlcommonb     #Canned Drill Cycle common call, before
       if initht$ <> refht$, drillref = zero
       else, drillref = one
@@ -1079,6 +1085,7 @@ pdrlcommonb     #Canned Drill Cycle common call, before
         prv_refht_a = c9k
         prv_refht_i = c9k
         prv_dwell$ = zero
+		prv_dwell_msec = zero
         prv_shftdrl$ = zero
         ]
       z$ = depth$
@@ -1094,25 +1101,25 @@ prdrlout        #R drill position
       if absinc$ = zero, refht_a, !refht_i
       else, refht_i, !refht_a
 
-pdrill$          #Canned Drill Cycle
+pdrill$          #Canned Drill Cycle(G81 G82 drill)
       pdrlcommonb
       pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
-        prdrlout, dwell$, *feed, strcantext, e$
+        prdrlout, dwell_msec, *feed, strcantext, e$
       pcom_movea
 
-ppeck$           #Canned Peck Drill Cycle
-      pdrlcommonb
-      pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
-        prdrlout, *peck1$, *feed, strcantext, e$
-      pcom_movea
-
-pchpbrk$         #Canned Chip Break Cycle
+ppeck$           #Canned Peck Drill Cycle(G83 peck drill)
       pdrlcommonb
       pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
         prdrlout, *peck1$, *feed, strcantext, e$
       pcom_movea
 
-ptap$            #Canned Tap Cycle
+pchpbrk$         #Canned Chip Break Cycle(G73 Chip break)
+      pdrlcommonb
+      pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
+        prdrlout, *peck1$, *feed, strcantext, e$
+      pcom_movea
+
+ptap$            #Canned Tap Cycle(G84 Tapping)
       pdrlcommonb
       result = newfs(17, feed)  # Set for tapping Feedrate format
       if met_tool$,
@@ -1131,25 +1138,25 @@ ptap$            #Canned Tap Cycle
         prdrlout, *pitch, !feed, strcantext, e$
       pcom_movea
 
-pbore1$          #Canned Bore #1 Cycle
+pbore1$          #Canned Bore #1 Cycle(G85 feed in and fee out)
       pdrlcommonb
       pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
-        prdrlout, dwell$, *feed, strcantext, e$
+        prdrlout, dwell_msec, *feed, strcantext, e$
       pcom_movea
 
-pbore2$          #Canned Bore #2 Cycle
+pbore2$          #Canned Bore #2 Cycle(G86 spindle stop at bottom then retract in G0)
       pdrlcommonb
       pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
         prdrlout, *feed, strcantext, e$
       pcom_movea
 
-pmisc1$          #Canned Fine Bore (shift) Cycle
+pmisc1$          #Canned Fine Bore (shift) Cycle(G76 shift in X or Y direction at bottom then retract in G0)
       pdrlcommonb
       pcan1, pbld, n$, *sgdrlref, *sgdrill, pxout, pyout, pfzout,
-        prdrlout, shftdrl$, dwell$, *feed, strcantext, e$
+        prdrlout, shftdrl$, dwell_msec, *feed, strcantext, e$
       pcom_movea
 
-pmisc2$          #Canned Rigid Tapping Cycle
+pmisc2$          #Canned Rigid Tapping Cycle(M29 G84)
       pdrlcommonb
       #RH/LH based on spindle direction
       if met_tool$,

@@ -906,7 +906,7 @@ psof$            #Start of file for non-zero tool number
       ptoolcomment
       comment$
       pcan
-      pbld, n$, *t$, sm06, sg49, e$
+      pbld, n$, *t$, sm06, sg49, e$ #Add G49 in tool change routine
       pindex
       if mi1$ > one, absinc$ = zero
       if use_rot_lock & (cuttype <> zero | (index = zero & prv_cabs <> fmtrnd(cabs))), prot_unlock
@@ -977,7 +977,7 @@ ptlchg$          #Tool change
       comment$
       pcan
       result = newfs(15, feed)  #Reset the output format for 'feed'
-      pbld, n$, *t$, sm06, sg49, e$ #Tool change code goes here
+      pbld, n$, *t$, sm06, sg49, e$ #Add G49 in tool change routine
       pindex
       sav_absinc = absinc$
       if mi1$ > one, absinc$ = zero
